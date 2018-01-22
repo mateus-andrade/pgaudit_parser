@@ -3,11 +3,18 @@
 #define PGAUDIT_PARSER_H
 
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 #include <regex.h>
 
-enum type_method {
-    DDL,
-    DML
+enum parse_state {
+    SESSION,
+    SEQUENCE,
+    STATEMENT,
+    STATEMENT_OBJ,
+    DB_OBJ,
+    QUERY
 };
 
 typedef struct timestamp {
@@ -18,7 +25,6 @@ typedef struct timestamp {
 typedef struct auditlog {
     uint16_t session;
     uint16_t sequence;
-    enum type_method type_method;
     char statement[33]; /* Max length pgsql statement */
     char statement_object [128];
     char *db_object;
@@ -27,6 +33,7 @@ typedef struct auditlog {
 
 int setup_pgaudit_parser();
 void tear_down_pgaudit_parser();
-auditlog_t parse_audit_log(char *audit_log);
+bool parse_auditlog(char *audit_log, auditlog_t pgaudit);
+int get_number(char *auditlog_offset, uint8_t match_len);
 
 #endif
