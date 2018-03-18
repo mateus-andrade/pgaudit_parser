@@ -44,11 +44,11 @@ auditlog_t parse_auditlog(char *auditlog) {
         switch (parse_state) {
             case SESSION:
                 pgaudit.session = get_number(auditlog + pmatch.rm_so + 1,
-                                           pmatch.rm_eo - pmatch.rm_so);
+                                             pmatch.rm_eo - pmatch.rm_so);
                 break;
             case SEQUENCE:
                 pgaudit.sequence = get_number(auditlog + pmatch.rm_so + 1,
-                                            pmatch.rm_eo - pmatch.rm_so);
+                                              pmatch.rm_eo - pmatch.rm_so);
                 break;
             case STATEMENT_TYPE:
                 pgaudit.statement_type = get_str(auditlog + pmatch.rm_so + 1,
@@ -79,6 +79,30 @@ auditlog_t parse_auditlog(char *auditlog) {
     }
 
     return pgaudit;
+}
+
+void pgaudit_freer(auditlog_t *pgaudit) {
+	free(pgaudit->statement_type);
+	free(pgaudit->statement);
+	free(pgaudit->statement_object);
+	free(pgaudit->db_object);
+	free(pgaudit->query);
+}
+
+void extract_log_from_file(const char* log_file_path) {
+	char auditlog[MAX_LOG_LENGTH], *auditlog_start = NULL;
+	FILE *f = fopen(log_file_path, "r");
+    auditlog_t pgaudit;
+
+	while (fgets(auditlog, MAX_LOG_LENGTH, f)) {
+		auditlog_start = strstr(auditlog, "AUDIT");
+		if (auditlog_start != NULL) {
+			pgaudit = parse_auditlog(auditlog_start);
+			pgaudit_freer(&pgaudit);
+		}
+	}
+
+	fclose(f);
 }
 
 void tear_down_pgaudit_parser() {
