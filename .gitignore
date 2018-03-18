@@ -60,11 +60,5 @@ Session.vim
 # Auto-generated tag files
 tags
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# CMake build
+build/*
