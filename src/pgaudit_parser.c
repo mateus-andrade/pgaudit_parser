@@ -58,14 +58,6 @@ auditlog_t parse_auditlog(char *auditlog) {
                 pgaudit.statement = get_str(auditlog + pmatch.rm_so + 1,
                                             pmatch.rm_eo - pmatch.rm_so);
                 break;
-            case STATEMENT_OBJ:
-                pgaudit.statement_object = get_str(auditlog + pmatch.rm_so + 1,
-                                                   pmatch.rm_eo - pmatch.rm_so);
-                break;
-            case DB_OBJ:
-                pgaudit.db_object = get_str(auditlog + pmatch.rm_so + 1,
-                                            pmatch.rm_eo - pmatch.rm_so);
-                break;
             case QUERY:
                 pgaudit.query = get_str(auditlog + pmatch.rm_so + 1,
                                         pmatch.rm_eo - pmatch.rm_so);
@@ -84,9 +76,8 @@ auditlog_t parse_auditlog(char *auditlog) {
 void pgaudit_freer(auditlog_t *pgaudit) {
 	free(pgaudit->statement_type);
 	free(pgaudit->statement);
-	free(pgaudit->statement_object);
-	free(pgaudit->db_object);
 	free(pgaudit->query);
+	memset(pgaudit, 0, sizeof(auditlog_t));
 }
 
 void extract_log_from_file(const char* log_file_path) {

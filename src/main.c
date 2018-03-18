@@ -20,6 +20,9 @@ int main(int argc, char *argv[]) {
 				syslog_opt = true;
 				// not implemented
 				break;
+			default:
+				// log error
+				return 1;
 		}
 	}
 
@@ -27,6 +30,8 @@ int main(int argc, char *argv[]) {
 
 	if (logfile_opt == true)
 		extract_log_from_file(logfile_path);
+	else if(syslog_opt == true)
+		// extract_log_from_syslog(syslog_port);
 
     tear_down_pgaudit_parser();
 

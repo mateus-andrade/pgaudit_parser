@@ -12,12 +12,10 @@
 #define MAX_LOG_LENGTH 4096
 
 enum parse_state {
-    SESSION,
     SEQUENCE,
+    SESSION,
     STATEMENT_TYPE,
     STATEMENT,
-    STATEMENT_OBJ,
-    DB_OBJ,
     QUERY
 };
 
@@ -27,12 +25,10 @@ typedef struct timestamp {
 } timestamp_t;
 
 typedef struct auditlog {
-    uint16_t session;
     uint16_t sequence;
+    uint16_t session;
     char *statement_type;
     char *statement;
-    char *statement_object;
-    char *db_object;
     char *query;
 } auditlog_t;
 
