@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <regex.h>
@@ -11,6 +12,7 @@
 enum parse_state {
     SESSION,
     SEQUENCE,
+    STATEMENT_TYPE,
     STATEMENT,
     STATEMENT_OBJ,
     DB_OBJ,
@@ -25,15 +27,15 @@ typedef struct timestamp {
 typedef struct auditlog {
     uint16_t session;
     uint16_t sequence;
-    char statement[33]; /* Max length pgsql statement */
-    char statement_object [128];
+    char *statement_type;
+    char *statement;
+    char *statement_object;
     char *db_object;
     char *query;
 } auditlog_t;
 
 int setup_pgaudit_parser();
 void tear_down_pgaudit_parser();
-bool parse_auditlog(char *audit_log, auditlog_t pgaudit);
-int get_number(char *auditlog_offset, uint8_t match_len);
+auditlog_t parse_auditlog(char *audit_log);
 
 #endif
