@@ -5,11 +5,16 @@
  * Implementation of a parse for pgaudit logs
  */
 
+#include "logger.h"
 #include "pgaudit_parser.h"
+
+#include <regex.h>
+#include <stdlib.h>
+#include <string.h>
 
 static regex_t re;
 
-int setup_pgaudit_parser() {
+int setup_pgaudit_parser(void) {
 
     if (regcomp(&re, ",[a-zA-Z0-9_. ]+", REG_EXTENDED))
         return 0;
@@ -19,6 +24,7 @@ int setup_pgaudit_parser() {
 
 static char *get_str(char *auditlog_offset, uint8_t match_len) {
     char *str = malloc(match_len * sizeof(char));
+
     strncpy(str, auditlog_offset, match_len);
     str[match_len - 1] = '\0';
 
@@ -74,28 +80,28 @@ auditlog_t parse_auditlog(char *auditlog) {
 }
 
 void pgaudit_freer(auditlog_t *pgaudit) {
-	free(pgaudit->statement_type);
-	free(pgaudit->statement);
-	free(pgaudit->query);
-	memset(pgaudit, 0, sizeof(auditlog_t));
+    free(pgaudit->statement_type);
+    free(pgaudit->statement);
+    free(pgaudit->query);
+    memset(pgaudit, 0, sizeof(auditlog_t));
 }
 
 void extract_log_from_file(const char* log_file_path) {
-	char auditlog[MAX_LOG_LENGTH], *auditlog_start = NULL;
-	FILE *f = fopen(log_file_path, "r");
+    char auditlog[MAX_LOG_LENGTH], *auditlog_start = NULL;
+    FILE *f = fopen(log_file_path, "r");
     auditlog_t pgaudit;
 
-	while (fgets(auditlog, MAX_LOG_LENGTH, f)) {
-		auditlog_start = strstr(auditlog, "AUDIT");
-		if (auditlog_start != NULL) {
-			pgaudit = parse_auditlog(auditlog_start);
-			pgaudit_freer(&pgaudit);
-		}
-	}
+    while (fgets(auditlog, MAX_LOG_LENGTH, f)) {
+        auditlog_start = strstr(auditlog, "AUDIT");
+        if (auditlog_start != NULL) {
+            pgaudit = parse_auditlog(auditlog_start);
+            pgaudit_freer(&pgaudit);
+        }
+    }
 
-	fclose(f);
+    fclose(f);
 }
 
-void tear_down_pgaudit_parser() {
+void tear_down_pgaudit_parser(void) {
     regfree(&re);
 }

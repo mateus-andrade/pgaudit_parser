@@ -1,3 +1,4 @@
 
-add_executable(parser pgaudit_parser.c main.c)
-#include_directories(./)
+FILE(GLOB SRCS *.c)
+
+add_executable(pgaudit_parserd ${SRCS})
