@@ -1,4 +1,5 @@
 #include "pgaudit_parser.h"
+#include "logger.h"
 
 #include <getopt.h>
 #include <stdbool.h>
@@ -7,7 +8,7 @@
 int main(int argc, char *argv[]) {
 
     int opt;
-    bool logfile_opt = false, syslog_opt = false;
+    bool logfile_opt = false;
     char *logfile_path;
     while ((opt = getopt(argc, argv, "l:s:")) != -1) {
         switch (opt) {
@@ -16,12 +17,9 @@ int main(int argc, char *argv[]) {
                 logfile_path = optarg;
                 break;
             case 's':
-                syslog_opt = true;
-                // not implemented
                 break;
             default:
-                // log error
-                return 1;
+                log_fatal("Usage: %s [-l | -s]", argv[0]);
         }
     }
 
@@ -29,8 +27,6 @@ int main(int argc, char *argv[]) {
 
     if (logfile_opt == true)
         extract_log_from_file(logfile_path);
-    else if(syslog_opt == true)
-        // extract_log_from_syslog(syslog_port);
 
     tear_down_pgaudit_parser();
 

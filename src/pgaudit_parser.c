@@ -19,11 +19,16 @@ int setup_pgaudit_parser(void) {
     if (regcomp(&re, ",[a-zA-Z0-9_. ]+", REG_EXTENDED))
         return 0;
 
+    log_info("Setting up PGAudit log parser...");
+
     return 1;
 }
 
 static char *get_str(char *auditlog_offset, uint8_t match_len) {
     char *str = malloc(match_len * sizeof(char));
+
+    if (str == NULL)
+        log_fatal("Cannot alloc memory, aborting...");
 
     strncpy(str, auditlog_offset, match_len);
     str[match_len - 1] = '\0';
@@ -88,8 +93,13 @@ void pgaudit_freer(auditlog_t *pgaudit) {
 
 void extract_log_from_file(const char* log_file_path) {
     char auditlog[MAX_LOG_LENGTH], *auditlog_start = NULL;
-    FILE *f = fopen(log_file_path, "r");
     auditlog_t pgaudit;
+    FILE *f = fopen(log_file_path, "r");
+
+    if (f == NULL)
+        log_fatal("Impossible to open file: %s", log_file_path);
+
+    log_info("Opening log file: %s", log_file_path);
 
     while (fgets(auditlog, MAX_LOG_LENGTH, f)) {
         auditlog_start = strstr(auditlog, "AUDIT");
@@ -103,5 +113,6 @@ void extract_log_from_file(const char* log_file_path) {
 }
 
 void tear_down_pgaudit_parser(void) {
+    log_info("Tear down PGAudit log parser...");
     regfree(&re);
 }
