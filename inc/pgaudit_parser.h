@@ -30,6 +30,6 @@ typedef struct auditlog {
 int setup_pgaudit_parser();
 void tear_down_pgaudit_parser();
 auditlog_t parse_auditlog(char *audit_log);
-void extract_log_from_file(const char* log_file_path);
-
+void extract_log_from_file(const char *log_file_path);
+void extract_log_from_syslog(const char *address, uint16_t port);
 #endif

@@ -10,9 +10,13 @@
 #define log_warn(message, ...)                                                 \
     logger(stderr, "WARN", message, ##__VA_ARGS__);
 
+#define log_error(message, ...)                                                 \
+    logger(stderr, "ERROR", message, ##__VA_ARGS__);
+
 #define log_fatal(message, ...)                                                \
     do {                                                                       \
         logger(stderr, "FATAL", message, ##__VA_ARGS__);                                 \
+        tear_down_pgaudit_parser();                                            \
         exit(1);                                                               \
     } while (0);
 

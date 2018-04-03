@@ -8,9 +8,14 @@
 #include "logger.h"
 #include "pgaudit_parser.h"
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <inttypes.h>
 #include <regex.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 static regex_t re;
 
@@ -91,7 +96,7 @@ void pgaudit_freer(auditlog_t *pgaudit) {
     memset(pgaudit, 0, sizeof(auditlog_t));
 }
 
-void extract_log_from_file(const char* log_file_path) {
+void extract_log_from_file(const char *log_file_path) {
     char auditlog[MAX_LOG_LENGTH], *auditlog_start = NULL;
     auditlog_t pgaudit;
     FILE *f = fopen(log_file_path, "r");
@@ -106,10 +111,51 @@ void extract_log_from_file(const char* log_file_path) {
         if (auditlog_start != NULL) {
             pgaudit = parse_auditlog(auditlog_start);
             pgaudit_freer(&pgaudit);
+            memset(log, 0, MAX_LOG_LENGTH);
         }
     }
 
     fclose(f);
+}
+
+void extract_log_from_syslog(const char *address, uint16_t port) {
+    auditlog_t pgaudit;
+    struct sockaddr_in sockaddr;
+    int server_fd, newsocket, opt = 1, addrlen = sizeof(sockaddr);
+    char log[MAX_LOG_LENGTH], *auditlog_start;
+
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+        log_fatal("Socket openning to listen syslog port failed");
+
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+                   sizeof(opt)))
+        log_fatal("Socket openning to listen syslog port failed");
+
+    sockaddr.sin_family = AF_INET;
+    sockaddr.sin_addr.s_addr = inet_addr(address);
+    sockaddr.sin_port = htons(port);
+
+    if (bind(server_fd, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) < 0)
+        log_fatal("Socket bind failed");
+
+    if (listen(server_fd, 3) < 0)
+        log_fatal("Listen on port %" SCNd16 " failed", port);
+
+    log_info("Listening on port %" SCNd16"...", port);
+
+    if ((newsocket = accept(server_fd, (struct sockaddr *) &sockaddr,
+                            (socklen_t *) &addrlen)) < 0)
+        log_fatal("Accept syslog client failed");
+
+    while (true) {
+      read(newsocket, log, MAX_LOG_LENGTH);
+      auditlog_start = strstr(log, "AUDIT");
+      if (auditlog_start != NULL) {
+        pgaudit = parse_auditlog(auditlog_start);
+        pgaudit_freer(&pgaudit);
+        memset(log, 0, MAX_LOG_LENGTH);
+      }
+    }
 }
 
 void tear_down_pgaudit_parser(void) {
