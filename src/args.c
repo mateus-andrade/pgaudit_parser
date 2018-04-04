@@ -12,7 +12,7 @@ args_t get_args(int argc, char *argv[]) {
     args_t args;
     memset(&args, 0, sizeof(args_t));
 
-    while ((opt = getopt(argc, argv, "l:s:")) != -1) {
+    while ((opt = getopt(argc, argv, "l:s:d")) != -1) {
         switch (opt) {
             case 'l':
                 args.logfile_opt = true;
@@ -22,6 +22,9 @@ args_t get_args(int argc, char *argv[]) {
                 args.syslog_opt = true;
                 sscanf(optarg, "%[^:]:%" SCNd16, args.syslog_address,
                        &args.syslog_port);
+                break;
+            case 'd':
+                args.is_daemon = true;
                 break;
             default:
                 log_fatal("Usage: %s [-l | -s]", argv[0]);

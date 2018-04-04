@@ -1,4 +1,5 @@
 #include "args.h"
+#include "daemonize.h"
 #include "pgaudit_parser.h"
 #include "logger.h"
 
@@ -8,6 +9,9 @@ int main(int argc, char *argv[]) {
 
     args_t args = get_args(argc, argv);
 
+    if (args.is_daemon)
+        daemonize();
+
     setup_pgaudit_parser();
 
     if (args.syslog_opt)
@@ -15,7 +19,7 @@ int main(int argc, char *argv[]) {
     else if (args.logfile_opt)
         extract_log_from_file(args.logfile_path);
     else
-        log_error("Usage: %s [-l | -s]", argv[0]);
+        log_error("Usage: %s -l log_file_path | -s address:port [-d]", argv[0]);
 
     tear_down_pgaudit_parser();
 

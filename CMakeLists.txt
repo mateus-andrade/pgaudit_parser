@@ -13,7 +13,7 @@ set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build)
 
 ### C Flags
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -O3")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -g")
 
 if(DEBUG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
