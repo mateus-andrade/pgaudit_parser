@@ -16,7 +16,6 @@
 #define log_fatal(message, ...)                                                \
     do {                                                                       \
         logger(stderr, "FATAL", message, ##__VA_ARGS__);                                 \
-        tear_down_pgaudit_parser();                                            \
         exit(1);                                                               \
     } while (0);
 

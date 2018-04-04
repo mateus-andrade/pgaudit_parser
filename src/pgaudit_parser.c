@@ -111,7 +111,7 @@ void extract_log_from_file(const char *log_file_path) {
         if (auditlog_start != NULL) {
             pgaudit = parse_auditlog(auditlog_start);
             pgaudit_freer(&pgaudit);
-            memset(log, 0, MAX_LOG_LENGTH);
+            memset(auditlog, 0, MAX_LOG_LENGTH);
         }
     }
 
@@ -122,7 +122,7 @@ void extract_log_from_syslog(const char *address, uint16_t port) {
     auditlog_t pgaudit;
     struct sockaddr_in sockaddr;
     int server_fd, newsocket, opt = 1, addrlen = sizeof(sockaddr);
-    char log[MAX_LOG_LENGTH], *auditlog_start;
+    char syslog[MAX_LOG_LENGTH], *auditlog_start;
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
         log_fatal("Socket openning to listen syslog port failed");
@@ -135,25 +135,32 @@ void extract_log_from_syslog(const char *address, uint16_t port) {
     sockaddr.sin_addr.s_addr = inet_addr(address);
     sockaddr.sin_port = htons(port);
 
-    if (bind(server_fd, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) < 0)
+    if (bind(server_fd, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) < 0) {
+        tear_down_pgaudit_parser();
         log_fatal("Socket bind failed");
+    }
 
-    if (listen(server_fd, 3) < 0)
+    if (listen(server_fd, 3) < 0) {
+        tear_down_pgaudit_parser();
         log_fatal("Listen on port %" SCNd16 " failed", port);
+    }
 
     log_info("Listening on port %" SCNd16"...", port);
 
     if ((newsocket = accept(server_fd, (struct sockaddr *) &sockaddr,
-                            (socklen_t *) &addrlen)) < 0)
+                            (socklen_t *) &addrlen)) < 0) {
+        tear_down_pgaudit_parser();
         log_fatal("Accept syslog client failed");
 
+    }
+
     while (true) {
-      read(newsocket, log, MAX_LOG_LENGTH);
-      auditlog_start = strstr(log, "AUDIT");
+      read(newsocket, syslog, MAX_LOG_LENGTH);
+      auditlog_start = strstr(syslog, "AUDIT");
       if (auditlog_start != NULL) {
         pgaudit = parse_auditlog(auditlog_start);
         pgaudit_freer(&pgaudit);
-        memset(log, 0, MAX_LOG_LENGTH);
+        memset(syslog, 0, MAX_LOG_LENGTH);
       }
     }
 }
