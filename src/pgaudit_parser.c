@@ -2,13 +2,13 @@
  * @file pgaudit_parser.c
  * @author Mateus Andrade
  *
- * Implementation of a parse for pgaudit logs
+ * Implementation of a parse for pgaudit logs from syslog uds and tcp outputs
  */
 
+#include "args.h"
 #include "logger.h"
 #include "pgaudit_parser.h"
 
-#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <inttypes.h>
 #include <regex.h>
@@ -118,50 +118,81 @@ void extract_log_from_file(const char *log_file_path) {
     fclose(f);
 }
 
-void extract_log_from_syslog(const char *address, uint16_t port) {
-    auditlog_t pgaudit;
-    struct sockaddr_in sockaddr;
-    int server_fd, newsocket, opt = 1, addrlen = sizeof(sockaddr);
-    char syslog[MAX_LOG_LENGTH], *auditlog_start;
+void extract_log_from_syslog_tcp(const char *address, uint16_t port) {
+    sock_inet sock;
+    int client, opt = 1, addrlen = sizeof(sock.addr);
 
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+    bzero(&sock.addr, sizeof(sock.addr));
+    bzero(sock.data.log_buffer, MAX_LOG_LENGTH);
+
+    if ((sock.data.sockfd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
         log_fatal("Socket openning to listen syslog port failed");
 
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
-                   sizeof(opt)))
+    if (setsockopt(sock.data.sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
+                   &opt, sizeof(opt)))
         log_fatal("Socket openning to listen syslog port failed");
 
-    sockaddr.sin_family = AF_INET;
-    sockaddr.sin_addr.s_addr = inet_addr(address);
-    sockaddr.sin_port = htons(port);
+    sock.addr.sin_family = AF_INET;
+    sock.addr.sin_addr.s_addr = inet_addr(address);
+    sock.addr.sin_port = htons(port);
 
-    if (bind(server_fd, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) < 0) {
+    if (bind(sock.data.sockfd, (struct sockaddr *) &sock.addr,
+             sizeof(sock.addr)) < 0) {
         tear_down_pgaudit_parser();
         log_fatal("Socket bind failed");
     }
 
-    if (listen(server_fd, 3) < 0) {
+    if (listen(sock.data.sockfd, 1) < 0) {
         tear_down_pgaudit_parser();
         log_fatal("Listen on port %" SCNd16 " failed", port);
     }
 
     log_info("Listening on port %" SCNd16"...", port);
 
-    if ((newsocket = accept(server_fd, (struct sockaddr *) &sockaddr,
+    if ((client = accept(sock.data.sockfd,
+                            (struct sockaddr *) &sock.addr,
                             (socklen_t *) &addrlen)) < 0) {
         tear_down_pgaudit_parser();
         log_fatal("Accept syslog client failed");
-
     }
 
     while (true) {
-      read(newsocket, syslog, MAX_LOG_LENGTH);
-      auditlog_start = strstr(syslog, "AUDIT");
-      if (auditlog_start != NULL) {
-        pgaudit = parse_auditlog(auditlog_start);
-        pgaudit_freer(&pgaudit);
-        memset(syslog, 0, MAX_LOG_LENGTH);
-      }
+        read(client, sock.data.log_buffer, MAX_LOG_LENGTH);
+        sock.data.auditlog_start = strstr(sock.data.log_buffer, "AUDIT");
+        if (sock.data.auditlog_start != NULL) {
+            sock.data.pgaudit = parse_auditlog(sock.data.auditlog_start);
+            pgaudit_freer(&sock.data.pgaudit);
+            memset(sock.data.log_buffer, 0, MAX_LOG_LENGTH);
+        }
+    }
+}
+
+void extract_log_from_syslog_uds(const char *endpoint) {
+    sock_uds sock;
+
+    bzero(&sock.addr, sizeof(sock.addr));
+
+    if ((sock.data.sockfd = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0)
+        log_fatal("UDS Socket openning failed");
+
+    sock.addr.sun_family = AF_UNIX;
+    strncpy(sock.addr.sun_path, endpoint, sizeof(sock.addr.sun_path));
+    sock.addr.sun_path[strlen(endpoint)-1] = '\0';
+
+    if (bind(sock.data.sockfd, (const struct sockaddr *)&sock.addr,
+        sizeof(sock.addr)) < 0) {
+        log_fatal("Socket bind failed");
+    }
+
+    while (true) {
+        recvfrom(sock.data.sockfd, sock.data.log_buffer, MAX_LOG_LENGTH, 0, 0,
+                 0);
+        sock.data.auditlog_start = strstr(sock.data.log_buffer, "AUDIT");
+        if (sock.data.auditlog_start != NULL) {
+           sock.data.pgaudit = parse_auditlog(sock.data.auditlog_start);
+           pgaudit_freer(&sock.data.pgaudit);
+           memset(sock.data.log_buffer, 0, MAX_LOG_LENGTH);
+        }
     }
 }
 

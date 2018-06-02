@@ -14,12 +14,15 @@ int main(int argc, char *argv[]) {
 
     setup_pgaudit_parser();
 
-    if (args.syslog_opt)
-        extract_log_from_syslog(args.syslog_address, args.syslog_port);
+    if (args.syslog_tcp_opt)
+        extract_log_from_syslog_tcp(args.syslog_endpoint, args.syslog_port);
+    else if (args.syslog_uds_opt)
+        extract_log_from_syslog_uds(args.syslog_endpoint);
     else if (args.logfile_opt)
         extract_log_from_file(args.logfile_path);
     else
-        log_error("Usage: %s -l log_file_path | -s address:port [-d]", argv[0]);
+        log_error("Usage: %s [-l log_file_path | -t address:port |"
+                  "-u sock_file] -d", argv[0]);
 
     tear_down_pgaudit_parser();
 
