@@ -52,4 +52,5 @@ auditlog_t parse_auditlog(char *audit_log);
 void extract_log_from_file(const char *log_file_path);
 void extract_log_from_syslog_tcp(const char *endpoint, uint16_t port);
 void extract_log_from_syslog_uds(const char *endpoint);
+void publish_audit(auditlog_t pgaudit);
 #endif

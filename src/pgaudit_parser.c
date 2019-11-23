@@ -11,6 +11,7 @@
 
 #include <netinet/in.h>
 #include <inttypes.h>
+#include <jansson.h>
 #include <regex.h>
 #include <stdlib.h>
 #include <string.h>
@@ -96,6 +97,21 @@ void pgaudit_freer(auditlog_t *pgaudit) {
     memset(pgaudit, 0, sizeof(auditlog_t));
 }
 
+void publish_audit(auditlog_t pgaudit) {
+    char *audit_json = NULL;
+    json_t *root = json_object();
+
+    json_object_set_new(root, "session", json_integer(pgaudit.session));
+    json_object_set_new(root, "sequence", json_integer(pgaudit.sequence));
+    json_object_set_new(root, "statement_type",
+                        json_string(pgaudit.statement_type));
+    json_object_set_new(root, "statement", json_string(pgaudit.statement));
+    json_object_set_new(root, "query", json_string(pgaudit.query));
+
+    audit_json = json_dumps(root, 0);
+    json_decref(root);
+}
+
 void extract_log_from_file(const char *log_file_path) {
     char auditlog[MAX_LOG_LENGTH], *auditlog_start = NULL;
     auditlog_t pgaudit;
@@ -110,6 +126,7 @@ void extract_log_from_file(const char *log_file_path) {
         auditlog_start = strstr(auditlog, "AUDIT");
         if (auditlog_start != NULL) {
             pgaudit = parse_auditlog(auditlog_start);
+            publish_audit(pgaudit);
             pgaudit_freer(&pgaudit);
             memset(auditlog, 0, MAX_LOG_LENGTH);
         }

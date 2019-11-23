@@ -1,4 +1,3 @@
-
 cmake_minimum_required(VERSION 3.2)
 
 ### Paths
@@ -20,6 +19,5 @@ if(DEBUG)
 endif()
 
 link_directories(lib)
-
 include_directories(inc)
 add_subdirectory(src)
