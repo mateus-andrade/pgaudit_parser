@@ -21,7 +21,6 @@
 static regex_t re;
 
 int setup_pgaudit_parser(void) {
-
     if (regcomp(&re, ",[a-zA-Z0-9_. ]+", REG_EXTENDED))
         return 0;
 
